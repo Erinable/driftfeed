@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from tests.conftest import make_item
-
 from driftfeed.app import App
 from driftfeed.models import EVENT_SAVE
 from driftfeed.sources.base import Source
+from tests.conftest import make_item
 
 
 class FakeSource(Source):

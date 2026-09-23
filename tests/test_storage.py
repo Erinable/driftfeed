@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from tests.conftest import make_item
 
 from driftfeed.models import EVENT_CLICK, EVENT_HIDE, Feedback
 from driftfeed.storage import Database, pack_vector, unpack_vector
 from driftfeed.storage.schema import LATEST_VERSION, migrate
+from tests.conftest import make_item
 
 
 def test_migrate_is_idempotent(tmp_path):

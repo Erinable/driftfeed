@@ -5,11 +5,11 @@ from __future__ import annotations
 import random
 
 import pytest
-from tests.conftest import make_item
 
 from driftfeed.ranking import HashingEmbedder, Ranker, ThompsonSampling
 from driftfeed.ranking.features import UserProfile, extract, recency_decay
 from driftfeed.ranking.scorer import LogisticSGDScorer
+from tests.conftest import make_item
 
 
 def test_hashing_embedder_is_deterministic_and_normalized():
