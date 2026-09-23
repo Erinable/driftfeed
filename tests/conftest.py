@@ -18,6 +18,20 @@ from driftfeed.storage import Database
 from driftfeed.util.http import HttpClient
 
 
+@pytest.fixture(autouse=True)
+def isolate_environment(monkeypatch, tmp_path):
+    import os
+
+    def unexpected_network(*args, **kwargs):
+        raise AssertionError("Tests must mock all HTTP requests")
+
+    for key in os.environ:
+        if key.startswith("DRIFTFEED_") or key in ("GITHUB_TOKEN", "GH_TOKEN"):
+            monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("DRIFTFEED_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr("requests.Session.request", unexpected_network)
+
+
 @dataclass
 class FakeResponse:
     status_code: int = 200

@@ -72,7 +72,7 @@ class Ranker:
         if scorer_state:
             self.scorer.load_state(scorer_state)
         explorer_state = self.db.get_state(STATE_KEY_EXPLORER)
-        if explorer_state:
+        if explorer_state and explorer_state.get("policy") == self.explorer.state().get("policy"):
             self.explorer.load_state(explorer_state)
 
     def save_state(self) -> None:
@@ -147,6 +147,7 @@ class Ranker:
         eps = self.epsilon
 
         scored: list[Scored] = []
+        arm_draws: dict[str, float] = {}
         for item in items:
             vec = self.embedding_for(item)
             feats = extract(
@@ -154,7 +155,9 @@ class Ranker:
             )
             arm = topic_arm(item)
             rel = self.relevance(feats)
-            exp = self.explorer.bonus(arm)
+            if arm not in arm_draws:
+                arm_draws[arm] = self.explorer.bonus(arm)
+            exp = arm_draws[arm]
             scored.append(
                 Scored(
                     item=item,
@@ -167,6 +170,10 @@ class Ranker:
             )
 
         scored.sort(key=lambda s: s.final, reverse=True)
+        unique: dict[str, Scored] = {}
+        for result in scored:
+            unique.setdefault(result.item.canonical_url or result.item.id, result)
+        scored = list(unique.values())
         if diversify:
             scored = self._diversify(scored, limit)
         top = scored[:limit]
@@ -219,7 +226,7 @@ class Ranker:
     def replay_feedback(self, *, seed_keywords: Sequence[str] = (), epochs: int = 1) -> int:
         """Retrain from the full feedback log. Used after changing the feature set."""
         self.scorer = LogisticSGDScorer()
-        self.explorer = build_explorer(rng=self.rng)
+        self.explorer = build_explorer(self.explorer.state().get("policy"), rng=self.rng)
         events = [fb for fb in self.db.all_feedback() if EVENT_LABELS.get(fb.event) is not None]
         profile = self.build_profile(seed_keywords)
         applied = 0

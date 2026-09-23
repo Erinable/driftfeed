@@ -28,6 +28,15 @@ The package is split into three replaceable layers:
    optional Sentence Transformers backend is selected with
    `DRIFTFEED_EMBEDDER=sentence-transformers`.
 
+The scorer is an incremental logistic regression with SGD over similarity,
+source, recency, popularity, domain, and tag features. During its first 25
+updates it blends with a seed-based cold-start scorer. Thompson sampling draws
+once per source/topic arm per feed, blended with relevance at a weight that
+falls from 0.45 to a floor of 0.08. UCB1 is also available. Canonical URLs are
+collapsed before a soft per-source quota promotes variety; if only one source
+has candidates, the feed still fills. These are replaceable baseline heuristics,
+not a claim of optimal recommendation quality.
+
 The CLI uses `argparse` because the command set is small, flat, and covered by
 the standard library; the only runtime dependency is `requests`.
 
@@ -71,16 +80,56 @@ negative preferences. The position refers to the most recently rendered feed.
 sources. Edit it at the path printed by `driftfeed stats`; set
 `DRIFTFEED_CONFIG` to use another file.
 
+For example, a config can override only the fields you need:
+
+```json
+{
+  "seed_keywords": ["rust", "distributed systems"],
+  "sources": {
+    "hn": {"lists": ["topstories", "newstories", "beststories"], "limit": 30},
+    "reddit": {"subreddits": ["programming", "rust"], "listing": "hot"},
+    "github": {"languages": ["rust"], "created_within_days": 30}
+  },
+  "ranking": {
+    "half_life_hours": 36,
+    "max_per_source_in_top": 4,
+    "exploration": "ucb1"
+  }
+}
+```
+
+Run `driftfeed fetch --seed` to add keyword search results. GitHub uses the
+official Search API (`created:>DATE`, sorted by stars), an approximation of
+trending. HN uses Firebase for lists and Algolia for keyword search. Candidates
+older than 21 days are currently excluded. Subscriptions and seed keywords
+live in JSON; SQLite's `sources` table tracks fetch state and `kv` stores model
+weights, bandit state, and the last displayed order.
+
 Credentials are read only from environment variables and are never stored in
 SQLite:
 
 * Reddit OAuth client credentials: `DRIFTFEED_REDDIT_CLIENT_ID` and
-  `DRIFTFEED_REDDIT_CLIENT_SECRET`.
+  `DRIFTFEED_REDDIT_CLIENT_SECRET`. Register an eligible confidential app at
+  <https://www.reddit.com/prefs/apps> and follow Reddit's current API access
+  requirements. This implementation uses the `client_credentials` grant;
+  installed-app and password grants are not implemented. Access is subject to
+  Reddit approval and terms, and is not guaranteed by this tool.
 * GitHub: `GITHUB_TOKEN`, `GH_TOKEN`, or `DRIFTFEED_GITHUB_TOKEN`; if none is
   set, a logged-in `gh auth token` is used when available.
 
 See `.env.example` for all path and model settings. The adapters use conservative
 request intervals and retry 429/5xx responses with exponential backoff.
+The CLI does not auto-load `.env`; export variables in your shell. Default data
+paths are `~/.local/share/driftfeed` on Linux (or `$XDG_DATA_HOME/driftfeed`),
+`~/Library/Application Support/driftfeed` on macOS, and
+`%LOCALAPPDATA%/driftfeed` on Windows.
+
+Impressions are logged but unlabelled; click/dwell/save currently each count as
+one positive update, while skip/hide are negatives. Dwell duration is stored but
+does not yet weight rewards. `read N --dwell SECONDS` records self-reported time;
+without that option the current baseline records 30 seconds. `open N` records a
+click and optionally accepts the same dwell flag. `retrain` replays labelled
+events with the current profile; it is not a leakage-free offline evaluator.
 
 ## Development
 

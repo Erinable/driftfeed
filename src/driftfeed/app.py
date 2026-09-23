@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from driftfeed.config import Config
 from driftfeed.models import EVENT_IMPRESSION, Feedback, Item
 from driftfeed.ranking import Ranker
+from driftfeed.ranking.explorer import build_explorer
 from driftfeed.ranking.ranker import STATE_KEY_FEED, Scored
 from driftfeed.sources import REGISTRY, Source, SourceUnavailable, build_source
 from driftfeed.storage import Database
@@ -45,6 +46,7 @@ class App:
             ranking = self.config.ranking
             self._ranker = Ranker(
                 self.db,
+                explorer=build_explorer(ranking.get("exploration", "thompson")),
                 half_life_hours=float(ranking.get("half_life_hours", 36.0)),
                 max_per_source_in_top=int(ranking.get("max_per_source_in_top", 4)),
             )

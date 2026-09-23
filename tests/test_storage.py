@@ -120,3 +120,14 @@ def test_mark_fetched_records_source_state(db):
     state = db.source_state()["hn"]
     assert state["cursor"] == "42"
     assert state["last_fetch_at"] > 0
+
+
+def test_refetch_changed_text_invalidates_cached_embedding(db):
+    item = make_item()
+    db.upsert_items([item])
+    db.put_embedding(item.id, "model", [1.0, 0.0])
+    item.title = "Entirely new text"
+
+    db.upsert_items([item])
+
+    assert db.get_embedding(item.id, model="model") is None

@@ -76,8 +76,10 @@ class Database:
             for item in items:
                 row = item.as_row()
                 existing = self.conn.execute(
-                    "SELECT 1 FROM items WHERE id = ?", (row["id"],)
+                    "SELECT title, body, tags FROM items WHERE id = ?", (row["id"],)
                 ).fetchone()
+                if existing and any(existing[key] != row[key] for key in ("title", "body", "tags")):
+                    self.conn.execute("DELETE FROM embeddings WHERE item_id = ?", (row["id"],))
                 self.conn.execute(
                     """
                     INSERT INTO items (id, source, source_id, url, canonical_url, title,
