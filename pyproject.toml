@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driftfeed"
+version = "0.1.0"
+description = "Single-user local feed recommender: content embeddings + implicit feedback online learning + bandit exploration"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "ack7" }]
+keywords = ["recommender", "feed", "hackernews", "reddit", "github", "bandit"]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet",
+]
+dependencies = ["requests>=2.31"]
+
+[project.optional-dependencies]
+st = ["sentence-transformers>=2.2"]
+dev = ["pytest>=7.4", "ruff>=0.5"]
+
+[project.scripts]
+driftfeed = "driftfeed.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Erinable/driftfeed"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
